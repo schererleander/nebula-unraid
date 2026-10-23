@@ -1,0 +1,56 @@
+#!/bin/bash
+set -u
+root=${NEBULA_ROOT:-/usr/local/emhttp/plugins/nebula}
+library=${NEBULA_LIBRARY:-/usr/local/lib/nebula}
+run=${NEBULA_RUN:-/run/nebula}
+log=${NEBULA_LOG:-/var/log/nebula.log}
+child=''
+watcher=''
+pause=''
+child_failures=0
+watcher_failures=0
+child_started=0
+watcher_started=0
+cleanup() {
+    trap '' TERM INT
+    for pid in "$child" "$watcher" "$pause"; do
+        if [ -n "$pid" ]; then kill -TERM "$pid" 2>/dev/null || true; fi
+    done
+    wait 2>/dev/null || true
+    rm -f "$run/nebula.pid" "$run/watcher.pid"
+    exit 0
+}
+trap cleanup TERM INT
+umask 077
+while true; do
+    if ! kill -0 "$child" 2>/dev/null; then
+        if [ -n "$child" ]; then
+            wait "$child"
+            echo "Nebula exited ($?); restarting." >> "$log"
+            if (( SECONDS - child_started >= 60 )); then child_failures=0; fi
+            child_failures=$((child_failures + 1))
+            if (( child_failures == 3 )); then "$root/scripts/health" nebula || true; fi
+        fi
+        "$library/bin/nebula" -config "$run/config.yml" >> "$log" 2>&1 &
+        child=$!
+        child_started=$SECONDS
+        echo "$child" > "$run/nebula.pid"
+    fi
+    if ! kill -0 "$watcher" 2>/dev/null; then
+        if [ -n "$watcher" ]; then
+            wait "$watcher"
+            echo "Watcher exited ($?); restarting." >> "$log"
+            if (( SECONDS - watcher_started >= 60 )); then watcher_failures=0; fi
+            watcher_failures=$((watcher_failures + 1))
+            if (( watcher_failures == 3 )); then "$root/scripts/health" watcher || true; fi
+        fi
+        "$root/scripts/watch" >> "$log" 2>&1 &
+        watcher=$!
+        watcher_started=$SECONDS
+        echo "$watcher" > "$run/watcher.pid"
+    fi
+    sleep 5 &
+    pause=$!
+    wait "$pause"
+    pause=''
+done

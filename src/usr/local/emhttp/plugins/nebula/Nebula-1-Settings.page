@@ -1,0 +1,45 @@
+Menu="Nebula:1"
+Title="Settings"
+Tag="gears"
+Markdown="false"
+---
+<table class="unraid"><thead><tr><td>Startup</td></tr></thead></table>
+<dl>
+  <dt>Automatic startup:</dt>
+  <dd><label><input type="checkbox" id="nebula-autostart" checked> Connect when Unraid starts</label></dd>
+</dl>
+<blockquote id="nebula-settings-message" role="status" hidden></blockquote>
+<br><br>
+<table class="unraid"><thead><tr><td>Set up or replace a profile</td></tr></thead></table>
+<form id="nebula-form" autocomplete="off">
+  <dl>
+    <dt><label for="nebula-profile-name">Profile name:</label></dt>
+    <dd><input id="nebula-profile-name" type="text" name="name" maxlength="80" required></dd>
+  </dl>
+  <dl>
+    <dt><label for="nebula-mode">Setup method:</label></dt>
+    <dd><select name="mode" id="nebula-mode"><option value="import">Import YAML</option><option value="manual">Manual</option></select></dd>
+  </dl>
+  <div id="nebula-import-panel">
+    <dl>
+      <dt><label for="nebula-profile">YAML profile:</label></dt>
+      <dd><input id="nebula-profile" type="file" name="profile" accept=".yaml,.yml,.json"></dd>
+    </dl>
+    <dl>
+      <dt><label for="nebula-yaml">Or paste a profile:</label></dt>
+      <dd><textarea id="nebula-yaml" name="yaml" rows="8" cols="80" spellcheck="false"></textarea></dd>
+    </dl>
+    <blockquote class="inline_help">Import a client profile with inline certificates and its own private key. Client settings are preserved; the plugin manages the tunnel interface name.</blockquote>
+  </div>
+  <div id="nebula-manual-panel" hidden>
+    <dl><dt><label for="nebula-lighthouse">Lighthouse mesh IP:</label></dt><dd><input id="nebula-lighthouse" name="lighthouse_ip" type="text" placeholder="IPv4 or IPv6 mesh address"></dd></dl>
+    <dl><dt><label for="nebula-endpoint">Lighthouse public address:</label></dt><dd><input id="nebula-endpoint" name="endpoint" type="text" placeholder="example.com:4242"></dd></dl>
+    <dl><dt>Relay:</dt><dd><label><input type="checkbox" name="use_relay"> Use this lighthouse as a relay</label></dd></dl>
+    <dl><dt><label for="nebula-ca">CA certificate:</label></dt><dd><input type="file" data-target="nebula-ca" accept=".crt,.pem"></dd><dt>&nbsp;</dt><dd><textarea id="nebula-ca" name="ca" rows="5" cols="80" spellcheck="false"></textarea></dd></dl>
+    <dl><dt><label for="nebula-cert">Host certificate:</label></dt><dd><input type="file" data-target="nebula-cert" accept=".crt,.pem"></dd><dt>&nbsp;</dt><dd><textarea id="nebula-cert" name="cert" rows="5" cols="80" spellcheck="false"></textarea></dd></dl>
+    <dl><dt><label for="nebula-key">Host private key:</label></dt><dd><input type="file" data-target="nebula-key" accept=".key,.pem"></dd><dt>&nbsp;</dt><dd><textarea id="nebula-key" name="key" rows="5" cols="80" spellcheck="false"></textarea></dd></dl>
+    <blockquote class="inline_help">The mesh IP comes from the host certificate. Manual setup permits traffic between authenticated peers. Never upload the CA signing key.</blockquote>
+  </div>
+  <blockquote class="inline_help">The profile, including the private key, is saved on your Unraid USB flash drive. Protect its backups. Saved credentials are never displayed here.</blockquote>
+  <dl><dt></dt><dd><button type="submit" id="nebula-save">Save &amp; connect</button></dd></dl>
+</form>

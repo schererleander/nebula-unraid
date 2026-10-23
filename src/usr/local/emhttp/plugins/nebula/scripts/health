@@ -1,0 +1,18 @@
+#!/usr/bin/php
+<?php
+declare(strict_types=1);
+
+require dirname(__DIR__) . '/include/common.php';
+
+$utils = new Nebula\Utils(Nebula\Paths::environment());
+try {
+    $notifications = new Nebula\Notifications($utils);
+    if (($argv[1] ?? '') === 'daily') {
+        $notifications->expiry((new Nebula\Config($utils))->load());
+    } else {
+        $notifications->failure($argv[1] ?? '');
+    }
+} catch (Throwable $error) {
+    $utils->log('The Nebula health check failed. Check the saved profile and system configuration.');
+    exit(1);
+}

@@ -1,0 +1,28 @@
+#!/usr/bin/php
+<?php
+declare(strict_types=1);
+
+require dirname(__DIR__) . '/include/common.php';
+
+// Tests explicitly provide isolated configuration and service paths.
+$utils = new Nebula\Utils(Nebula\Paths::environment());
+$system = new Nebula\System($utils);
+try {
+    if (($argv[1] ?? '') === 'remove') {
+        $lock = $utils->lock('integration', true);
+        try {
+            if ($system->register(false)) {
+                $system->refresh();
+            }
+        } finally {
+            flock($lock, LOCK_UN);
+            fclose($lock);
+        }
+    } else {
+        (new Nebula\Watcher($system, $utils))->run(($argv[1] ?? '') === 'once');
+    }
+} catch (Throwable $error) {
+    $utils->log('Service integration failed. Check the system configuration.');
+    fwrite(STDERR, 'Service integration failed. Check the connection log.' . "\n");
+    exit(1);
+}

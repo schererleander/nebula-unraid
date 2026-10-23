@@ -1,0 +1,77 @@
+name: Update upstream tools
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: write
+
+concurrency: upstream-updates
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+      - name: Update pinned versions and checksums
+        shell: python
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          import hashlib
+          import json
+          import re
+          from pathlib import Path
+          import subprocess
+          import tempfile
+          import xml.etree.ElementTree as ET
+
+          path = Path('plugin/nebula.plg')
+          manifest = path.read_text()
+          document = ET.fromstring(manifest)
+          updates = []
+          for repository, asset in [('slackhq/nebula', 'nebula-linux-amd64.tar.gz'),
+                                    ('mikefarah/yq', 'yq_linux_amd64')]:
+              release = json.loads(subprocess.check_output(['gh', 'api', f'repos/{repository}/releases/latest']))
+              if not re.fullmatch(r'v?\d+\.\d+\.\d+', release['tag_name']):
+                  raise ValueError('Unexpected upstream release tag.')
+              file = next(item for item in document.findall('FILE')
+                          if (item.findtext('URL') or '').startswith(f'https://github.com/{repository}/'))
+              old_url = file.findtext('URL')
+              download = next(item for item in release['assets'] if item['name'] == asset)
+              if download['browser_download_url'] == old_url:
+                  continue
+              with tempfile.TemporaryDirectory() as directory:
+                  subprocess.run(['gh', 'release', 'download', release['tag_name'], '--repo', repository,
+                                  '--pattern', asset, '--dir', directory], check=True)
+                  digest = hashlib.sha256((Path(directory) / asset).read_bytes()).hexdigest()
+              old_version = old_url.split('/download/')[1].split('/')[0].removeprefix('v')
+              version = release['tag_name'].removeprefix('v')
+              cache = Path(file.get('Name')).name
+              manifest = manifest.replace(cache, cache.replace(old_version, version))
+              manifest = manifest.replace(old_url, download['browser_download_url'])
+              manifest = manifest.replace(file.findtext('SHA256'), digest)
+              updates.append(f'- [{repository} {release["tag_name"]}]({release["html_url"]})')
+          path.write_text(manifest)
+          Path('/tmp/nebula-updates.md').write_text('Update pinned upstream tools and SHA256 checksums.\n\n'
+                                                 + '\n'.join(updates) + '\n\nBuild and lint run automatically. No automatic merge or release.\n')
+      - name: Open update pull request
+        id: pr
+        uses: peter-evans/create-pull-request@v8
+        with:
+          branch: automation/upstream-tools
+          delete-branch: true
+          add-paths: plugin/nebula.plg
+          commit-message: 'chore: update upstream tools'
+          title: 'chore: update Nebula and yq'
+          body-path: /tmp/nebula-updates.md
+      - name: Run CI on the update branch
+        if: steps.pr.outputs.pull-request-operation == 'created' || steps.pr.outputs.pull-request-operation == 'updated'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: gh workflow run build.yml --ref automation/upstream-tools

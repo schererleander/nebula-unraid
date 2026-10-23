@@ -1,0 +1,89 @@
+name: Build
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    uses: ./.github/workflows/lint.yml
+  build:
+    needs: lint
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.package.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+      - name: Build Slackware package and plugin
+        id: package
+        shell: python
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          import base64
+          import hashlib
+          import os
+          from pathlib import Path
+          import subprocess
+          import xml.etree.ElementTree as ET
+
+          manifest = Path('plugin/nebula.plg').read_text()
+          document = ET.fromstring(manifest)
+          version = document.get('version')
+          if os.environ.get('RELEASE_TAG') and os.environ['RELEASE_TAG'] != version:
+              raise SystemExit('The release tag must match the version in plugin/nebula.plg.')
+          package = next(file for file in document.findall('FILE') if file.get('Type') == 'base64')
+          output = Path('dist')
+          output.mkdir()
+          archive = output / Path(package.get('Name')).name
+          subprocess.run(['tar', '--sort=name', '--mtime=@0', '--owner=0', '--group=0',
+                          '--numeric-owner', '-cJf', str(archive), '-C', 'src',
+                          *sorted(path.name for path in Path('src').iterdir())], check=True)
+          payload = archive.read_bytes()
+          start = manifest.index(f'<FILE Name="{package.get("Name")}"')
+          end = manifest.index('</FILE>', start) + len('</FILE>')
+          block = f'<FILE Name="{package.get("Name")}" Type="base64">\n<INLINE>\n'
+          block += base64.encodebytes(payload).decode().strip() + '\n</INLINE>\n'
+          block += f'<SHA256>{hashlib.sha256(payload).hexdigest()}</SHA256>\n</FILE>'
+          (output / 'nebula.plg').write_text(manifest[:start] + block + manifest[end:])
+          subprocess.run(['tar', '-czf', str(output / f'nebula-{version}.tar.gz'),
+                          '-C', 'dist', 'nebula.plg', archive.name], check=True)
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as result:
+              result.write(f'version={version}\n')
+      - name: PHP and Python checks
+        run: python3 -m unittest discover -s tests -p 'test_*.py' -v
+      - name: Upload installable archive
+        uses: actions/upload-artifact@v7
+        with:
+          name: nebula-${{ steps.package.outputs.version }}
+          path: |
+            dist/nebula.plg
+            dist/*.txz
+            dist/*.tar.gz
+          if-no-files-found: error
+  publish:
+    if: github.event_name == 'release'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: nebula-${{ needs.build.outputs.version }}
+          path: dist
+      - name: Attach release downloads
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: gh release upload "$RELEASE_TAG" dist/* --clobber

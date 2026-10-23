@@ -1,0 +1,31 @@
+Menu="NetworkServices"
+Icon="icon.png"
+Title="Nebula"
+Type="xmenu"
+Tabs="true"
+Markdown="false"
+---
+<dl>
+  <dt>Status:</dt>
+  <dd><i id="nebula-dot" class="fa fa-circle grey-text" aria-hidden="true"></i> <strong id="nebula-state">Checking…</strong> <span id="nebula-name"></span></dd>
+</dl>
+<dl>
+  <dt></dt>
+  <dd>
+    <button type="button" id="nebula-connect" disabled>Connect</button>
+    <button type="button" id="nebula-disconnect" disabled>Disconnect</button>
+    <button type="button" id="nebula-reconnect" disabled>Restart</button>
+    <button type="button" id="nebula-refresh">Refresh</button>
+  </dd>
+</dl>
+<blockquote id="nebula-message" role="status" hidden></blockquote>
+<br><br>
+<table class="unraid"><thead><tr><td>Connection</td></tr></thead></table>
+<dl><dt>Status:</dt><dd id="nebula-connection">Checking…</dd></dl>
+<dl><dt>Device:</dt><dd id="nebula-host">—</dd></dl>
+<dl><dt>Mesh IP:</dt><dd id="nebula-address">—</dd></dl>
+<dl><dt>Lighthouse:</dt><dd id="nebula-lighthouses">—</dd></dl>
+<dl><dt>Certificate expires:</dt><dd id="nebula-expires">—</dd></dl>
+<dl><dt></dt><dd>Running means the local service is active. A peer must be online to test end-to-end connectivity.</dd></dl>
+
+<script defer src="/plugins/nebula/assets/settings.js?v=<?=substr(hash_file('sha256', '/usr/local/emhttp/plugins/nebula/assets/settings.js'), 0, 12)?>"></script>

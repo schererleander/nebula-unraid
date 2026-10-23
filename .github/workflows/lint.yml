@@ -1,0 +1,29 @@
+name: Lint
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+      - name: Workflow lint
+        run: docker run --rm -v "$PWD:/repo" --workdir /repo rhysd/actionlint:latest -color
+      - name: PHP syntax
+        run: |
+          find src tests -type f \( -name '*.php' -o -name '*.page' -o -path '*/scripts/config' -o -path '*/scripts/watch' -o -path '*/scripts/health' \) -print0 | xargs -0 -n1 php -l
+      - name: Python syntax
+        run: python3 -m compileall -q tests
+      - name: Shell syntax
+        run: |
+          for file in src/etc/rc.d/rc.nebula src/etc/cron.daily/nebula src/usr/local/emhttp/plugins/nebula/scripts/supervise src/usr/local/emhttp/plugins/nebula/event/*; do
+            bash -n "$file"
+          done

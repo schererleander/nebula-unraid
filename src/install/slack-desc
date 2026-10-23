@@ -1,0 +1,4 @@
+nebula-unraid: nebula-unraid (Nebula integration for Unraid)
+nebula-unraid:
+nebula-unraid: Settings page, service scripts and Unraid integration.
+nebula-unraid: Saved profiles are retained when this package is removed.

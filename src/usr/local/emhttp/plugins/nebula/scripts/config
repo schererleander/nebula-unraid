@@ -1,0 +1,17 @@
+#!/usr/bin/php
+<?php
+declare(strict_types=1);
+
+require dirname(__DIR__) . '/include/common.php';
+
+try {
+    $config = new Nebula\Config(new Nebula\Utils(Nebula\Paths::environment()));
+    switch ($argv[1] ?? '') {
+        case 'prepare': $config->prepare(); break;
+        case 'enabled': exit(($config->load()['autostart'] ?? false) ? 0 : 1);
+        default: throw new RuntimeException('Unknown configuration action.');
+    }
+} catch (Throwable $error) {
+    fwrite(STDERR, $error instanceof RuntimeException ? $error->getMessage() . "\n" : "Invalid saved profile.\n");
+    exit(1);
+}

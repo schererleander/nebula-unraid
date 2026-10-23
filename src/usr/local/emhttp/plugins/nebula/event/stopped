@@ -1,0 +1,3 @@
+#!/bin/bash
+# Keep management access available with the storage array stopped.
+/etc/rc.d/rc.nebula autostart
