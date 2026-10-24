@@ -10,20 +10,16 @@ permissions:
 jobs:
   lint:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.2'
+          coverage: none
       - name: Workflow lint
-        run: docker run --rm -v "$PWD:/repo" --workdir /repo rhysd/actionlint:latest -color
-      - name: PHP syntax
-        run: |
-          find src tests -type f \( -name '*.php' -o -name '*.page' -o -path '*/scripts/config' -o -path '*/scripts/watch' -o -path '*/scripts/health' \) -print0 | xargs -0 -n1 php -l
-      - name: Python syntax
-        run: python3 -m compileall -q tests
-      - name: Shell syntax
-        run: |
-          for file in src/etc/rc.d/rc.nebula src/etc/cron.daily/nebula src/usr/local/emhttp/plugins/nebula/scripts/supervise src/usr/local/emhttp/plugins/nebula/event/*; do
-            bash -n "$file"
-          done
+        run: docker run --rm -v "$PWD:/repo" --workdir /repo rhysd/actionlint:1.7.12 -color
+      - name: Source syntax
+        run: bash .github/scripts/lint.sh
