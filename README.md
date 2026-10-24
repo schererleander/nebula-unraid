@@ -11,3 +11,15 @@ Download `nebula.plg` from [GitHub Releases](https://github.com/schererleander/n
 and install it through Unraid’s Plugin Manager. Releases also include a `.tar.gz`
 archive and the Slackware `.txz` package. The `.plg` embeds that package; Nebula
 and yq are downloaded during installation.
+
+To install from a URL in Unraid's **Plugins → Install Plugin**, use:
+
+```text
+https://github.com/schererleander/nebula-unraid/releases/latest/download/nebula.plg
+```
+
+To publish, push your changes to the default branch and run **Actions → Draft
+release → Run workflow**. The workflow assigns a UTC timestamp version such as
+`2026.10.24.1430` to the generated plugin, packages, and release tag. No manual
+version bump is needed. Open the draft link in the summary, review it, and publish
+it as the latest stable release. Versions use the current UTC date, hour, and minute.

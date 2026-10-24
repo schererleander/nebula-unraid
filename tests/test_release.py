@@ -17,6 +17,10 @@ MANIFEST = ET.parse(ROOT / 'dist/nebula.plg').getroot()
 
 
 class ReleaseTests(unittest.TestCase):
+    def run_php(self, *arguments):
+        result = subprocess.run(['php', *map(str, arguments)], capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
     def test_package_matches_source(self):
         package = next(file for file in MANIFEST.findall('FILE') if file.get('Type') == 'base64')
         payload = base64.b64decode(package.findtext('INLINE'))
@@ -38,7 +42,7 @@ class ReleaseTests(unittest.TestCase):
 
     def test_php_behavior(self):
         for name in ['integration', 'platform', 'watcher']:
-            subprocess.run(['php', str(ROOT / f'tests/{name}_test.php')], check=True)
+            self.run_php(ROOT / f'tests/{name}_test.php')
 
     def test_profiles_with_upstream_tools(self):
         with tempfile.TemporaryDirectory(prefix='nebula-profiles-') as directory:
@@ -70,4 +74,4 @@ class ReleaseTests(unittest.TestCase):
                                 '-duration', '30m', '-ca-crt', str(fixtures / 'ca.crt'),
                                 '-ca-key', str(fixtures / 'ca.key'), '-out-crt', f'{fixtures}/{name}.crt',
                                 '-out-key', f'{fixtures}/{name}.key'], check=True)
-            subprocess.run(['php', str(ROOT / 'tests/profile_test.php'), str(root), str(fixtures)], check=True)
+            self.run_php(ROOT / 'tests/profile_test.php', root, fixtures)
