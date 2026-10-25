@@ -1,0 +1,2 @@
+#!/bin/sh
+/usr/local/emhttp/plugins/nebula/scripts/health daily

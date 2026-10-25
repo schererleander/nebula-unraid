@@ -1,0 +1,89 @@
+#!/bin/bash
+set -eu
+
+root=${NEBULA_ROOT:-/usr/local/emhttp/plugins/nebula}
+library=${NEBULA_LIBRARY:-/usr/local/lib/nebula}
+run=${NEBULA_RUN:-/run/nebula}
+log=${NEBULA_LOG:-/var/log/nebula.log}
+
+supervisor_running() {
+    [ -f "$run/supervisor.pid" ] || return 1
+    local pid
+    pid=$(cat "$run/supervisor.pid")
+    [[ "$pid" =~ ^[0-9]+$ ]] || return 1
+    kill -0 "$pid" 2>/dev/null &&
+        tr '\0' '\n' < "/proc/$pid/cmdline" | grep -Fxq "$root/scripts/supervise"
+}
+
+child_running() {
+    [ -f "$run/nebula.pid" ] || return 1
+    local pid
+    pid=$(cat "$run/nebula.pid")
+    [[ "$pid" =~ ^[0-9]+$ ]] || return 1
+    [ "$(readlink "/proc/$pid/exe" 2>/dev/null)" = "$library/bin/nebula" ]
+}
+
+start() {
+    if supervisor_running; then return 0; fi
+    # Refuse to take over another process's interface.
+    if ip link show nebula1 >/dev/null 2>&1; then
+        echo 'nebula1 is already in use.' >> "$log"
+        return 1
+    fi
+    if ! "$root/scripts/config" prepare >> "$log" 2>&1; then
+        echo 'Saved profile failed Nebula validation.' >> "$log"
+        return 1
+    fi
+    umask 077
+    nohup "$root/scripts/supervise" </dev/null >/dev/null 2>&1 9>&- &
+    echo $! > "$run/supervisor.pid"
+    sleep 1
+    supervisor_running && child_running
+}
+
+stop() {
+    if supervisor_running; then
+        local pid
+        pid=$(cat "$run/supervisor.pid")
+        kill -TERM "$pid"
+        for ((attempt = 0; attempt < 100; attempt++)); do
+            if ! supervisor_running; then break; fi
+            sleep 0.1
+        done
+        if supervisor_running; then
+            if child_running; then kill -KILL "$(cat "$run/nebula.pid")" 2>/dev/null || true; fi
+            if [ -f "$run/watcher.pid" ]; then
+                watcher_pid=$(cat "$run/watcher.pid")
+                if [[ "$watcher_pid" =~ ^[0-9]+$ ]] &&
+                    tr '\0' '\n' < "/proc/$watcher_pid/cmdline" 2>/dev/null | grep -Fxq "$root/scripts/watch"; then
+                    kill -TERM "$watcher_pid" 2>/dev/null || true
+                fi
+            fi
+            kill -KILL "$pid" 2>/dev/null || true
+        fi
+    elif child_running; then
+        kill -TERM "$(cat "$run/nebula.pid")"
+    fi
+    rm -f "$run/supervisor.pid" "$run/nebula.pid" "$run/watcher.pid" "$run/config.yml"
+    if [ "${2:-}" != --no-refresh ]; then
+        # Listener updates can be slow. Do not hold the service lock or the
+        # WebGUI request while they run; a restart must be free to start again.
+        nohup "$root/scripts/watch" once </dev/null >> "$log" 2>&1 9>&- &
+    fi
+}
+
+if [ "${1:-}" != status ]; then
+    mkdir -p "$run"
+    chmod 700 "$run"
+    exec 9>"$run/service.lock"
+    flock -w 25 9 || exit 1
+fi
+
+case "${1:-}" in
+    start) start ;;
+    stop) stop "$@" ;;
+    restart) stop; start ;;
+    autostart) if "$root/scripts/config" enabled; then start; fi ;;
+    status) supervisor_running && child_running ;;
+    *) echo 'Usage: rc.nebula {start|stop|restart|autostart|status}'; exit 2 ;;
+esac

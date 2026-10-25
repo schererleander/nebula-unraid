@@ -1,0 +1,18 @@
+Menu="Nebula:2"
+Title="Info"
+Tag="info-circle"
+Markdown="false"
+---
+<?php
+$plugin = @simplexml_load_file('/var/log/plugins/nebula.plg');
+require_once '/usr/local/emhttp/plugins/nebula/include/common.php';
+$utils = new Nebula\Utils(Nebula\Paths::environment());
+[$code, $version] = $utils->run([$utils->tool('nebula'), '-version']);
+?>
+<table class="unraid"><thead><tr><td>About</td></tr></thead></table>
+<dl><dt>Plugin version:</dt><dd><?=htmlspecialchars((string)($plugin['version'] ?? 'Unknown'))?></dd></dl>
+<dl><dt>Nebula version:</dt><dd><?=htmlspecialchars($code === 0 ? trim($version) : 'Unknown')?></dd></dl>
+<dl><dt>Interface:</dt><dd><code>nebula1</code></dd></dl>
+<dl><dt>Profile:</dt><dd><code>/boot/config/plugins/nebula/profile.json</code></dd></dl>
+<dl><dt>Connection log:</dt><dd><button type="button" onclick="openTerminal('log','nebula','nebula.log')">View log</button></dd></dl>
+<dl><dt></dt><dd><a href="https://nebula.defined.net/docs/" target="_blank" rel="noopener">Nebula documentation</a></dd></dl>

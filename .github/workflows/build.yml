@@ -1,0 +1,60 @@
+name: Build
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+  workflow_call:
+    inputs:
+      release:
+        description: Generate a timestamp version for a release
+        type: boolean
+        default: false
+    outputs:
+      version:
+        description: Plugin version included in the build artifacts
+        value: ${{ jobs.build.outputs.version }}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  lint:
+    uses: ./.github/workflows/lint.yml
+
+  build:
+    needs: lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    outputs:
+      version: ${{ steps.package.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          coverage: none
+      - name: Build Slackware package and plugin
+        id: package
+        env:
+          RELEASE_BUILD: ${{ inputs.release }}
+        run: python3 .github/scripts/build.py
+      - name: PHP and Python checks
+        run: python3 -m unittest discover -s tests -p 'test_*.py'
+      - name: Upload installable archive
+        uses: actions/upload-artifact@v7
+        with:
+          name: nebula-${{ steps.package.outputs.version }}
+          compression-level: 0
+          path: |
+            dist/nebula.plg
+            dist/*.txz
+            dist/*.tar.gz
+          if-no-files-found: error
+          retention-days: 14

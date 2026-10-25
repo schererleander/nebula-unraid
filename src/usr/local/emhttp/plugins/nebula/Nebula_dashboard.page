@@ -1,0 +1,25 @@
+Menu="Dashboard:0"
+Markdown="false"
+---
+<?php
+require_once '/usr/local/emhttp/plugins/nebula/include/common.php';
+
+try {
+    $nebulaUtils = new Nebula\Utils(Nebula\Paths::environment());
+    $nebulaStatus = Nebula\serviceStatus(new Nebula\Config($nebulaUtils), $nebulaUtils);
+    $nebulaState = $nebulaStatus['running'] ? 'Running' : ($nebulaStatus['configured'] ? 'Disconnected' : 'Not configured');
+    $nebulaColor = $nebulaStatus['running'] ? 'green-text' : 'grey-text';
+    $nebulaName = htmlspecialchars($nebulaStatus['profile']['name'] ?? '—');
+    $nebulaAddress = htmlspecialchars(implode(', ', $nebulaStatus['profile']['networks'] ?? []) ?: '—');
+    $mytiles['nebula']['column2'] = <<<HTML
+<tbody title="Nebula">
+<tr><td><i class="icon-vpn f32"></i><div class="section">Nebula<br><span class="$nebulaColor">$nebulaState</span><br></div>
+<a href="/Settings/Nebula" title="Nebula settings"><i class="fa fa-fw fa-cog control"></i></a></td></tr>
+<tr><td><span class="w26">Profile:</span>$nebulaName</td></tr>
+<tr><td><span class="w26">Mesh IP:</span>$nebulaAddress</td></tr>
+</tbody>
+HTML;
+} catch (Throwable $error) {
+    $mytiles['nebula']['column2'] = '<tbody title="Nebula"><tr><td><a href="/Settings/Nebula">Nebula: status unavailable</a></td></tr></tbody>';
+}
+?>
