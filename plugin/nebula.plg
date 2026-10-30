@@ -5,9 +5,9 @@
 ### 2026.10.23p
 - Organize the source tree and build downloadable packages in GitHub Actions.
 ]]></CHANGES>
-<FILE Name="/boot/config/plugins/nebula/nebula-linux-amd64-1.11.2.tar.gz">
-<URL>https://github.com/slackhq/nebula/releases/download/v1.11.2/nebula-linux-amd64.tar.gz</URL>
-<SHA256>6140d33f2ec21ce7f6b655b5bc820e93a684d97e51d0ddcf907324b5b28aac1e</SHA256>
+<FILE Name="/boot/config/plugins/nebula/nebula-linux-amd64-1.12.0.tar.gz">
+<URL>https://github.com/slackhq/nebula/releases/download/v1.12.0/nebula-linux-amd64.tar.gz</URL>
+<SHA256>44bf6ae565cf7e5391ca49e8c5f9e3b825755c385eacf79a1f0d28a0b7d3fe51</SHA256>
 </FILE>
 <FILE Name="/boot/config/plugins/nebula/yq-linux-amd64-4.54.1">
 <URL>https://github.com/mikefarah/yq/releases/download/v4.54.1/yq_linux_amd64</URL>
@@ -354,7 +354,7 @@ tar -xJf "$package" -C "$staging"
 candidate="$staging/usr/local/lib/nebula"
 web="$staging/usr/local/emhttp/plugins/nebula"
 mkdir -p "$candidate/bin"
-tar -xzf "$state/nebula-linux-amd64-1.11.2.tar.gz" -C "$candidate/bin" nebula nebula-cert
+tar -xzf "$state/nebula-linux-amd64-1.12.0.tar.gz" -C "$candidate/bin" nebula nebula-cert
 install -m 755 "$state/yq-linux-amd64-4.54.1" "$candidate/bin/yq"
 chmod 755 "$candidate/bin/nebula" "$candidate/bin/nebula-cert"
 # Check the candidate independently of the saved profile's certificate validity.
